@@ -345,7 +345,7 @@ class LocalRecordsCompanion extends UpdateCompanion<LocalRecord> {
     required DateTime localUpdatedAt,
     this.serverUpdatedAt = const Value.absent(),
     this.deletedAt = const Value.absent(),
-    this.rowid = const Value.absent(),
+    this.rowid = const Value.absent(), required String entityName,
   })  : id = Value(id),
         tableName = Value(tableName),
         payload = Value(payload),

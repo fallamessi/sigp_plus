@@ -97,7 +97,7 @@ class SyncService {
                 ),
                 deletedAt: Value(
                   DateTime.tryParse(row['deleted_at']?.toString() ?? ''),
-                ),
+                ), tableName: '',
               ),
             );
       }
