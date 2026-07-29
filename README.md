@@ -1,17 +1,26 @@
-# sigp_plus
+# SIGP+ — Flutter Desktop Offline First
 
-A new Flutter project.
+## Fonctions incluses
+- Authentification Supabase Auth.
+- SQLite local avec Drift.
+- Ajout, modification, suppression logique et recherche hors connexion.
+- File d’attente de synchronisation et indicateur `synced / pending / error`.
+- Synchronisation PostgreSQL au retour de la connexion.
+- Pages Agences, Services, Personnes, Dossiers, Documents, Notifications et Audit.
+- Design Desktop Material 3 avec menu latéral.
+- SQL pour `updated_at`, `deleted_at`, audit par triggers, RLS et Realtime.
 
-## Getting Started
+## Installation
+```bash
+flutter pub get
+dart run build_runner build --delete-conflicting-outputs
+flutter run -d windows --dart-define=SUPABASE_URL=https://VOTRE-PROJET.supabase.co --dart-define=SUPABASE_ANON_KEY=VOTRE_CLE_PUBLISHABLE
+```
 
-This project is a starting point for a Flutter application.
+Exécutez d’abord votre schéma PostgreSQL dans Supabase, puis `supabase/001_offline_audit.sql`.
 
-A few resources to get you started if this is your first Flutter project:
+## Important
+Ne placez jamais la `service_role` dans Flutter. Utilisez seulement la clé publishable/anon. Pour OCR/IA, créez un microservice ou une Edge Function qui lit un document Storage et écrit le résultat dans `documents.donnees_ocr` / `ia_analyses`.
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Extension des modules
+Le composant `CrudPage` est générique. Ajoutez un élément dans `ShellPage` avec le nom réel de la table et ses champs. Pour les relations complexes (dossiers, workflow, documents), créez ensuite des formulaires spécialisés avec listes déroulantes et validations métier.

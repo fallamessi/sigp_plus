@@ -1,0 +1,18 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../app.dart';
+
+class CrudPage extends ConsumerStatefulWidget {
+  const CrudPage({super.key,required this.title,required this.entity,required this.fields});
+  final String title,entity; final Map<String,String> fields;
+  @override ConsumerState<CrudPage> createState()=>_CrudPageState();
+}
+class _CrudPageState extends ConsumerState<CrudPage>{
+  String query=''; bool syncing=false;
+  Future<void> sync() async {setState(()=>syncing=true); await ref.read(repoProvider).syncEntity(widget.entity); if(mounted)setState(()=>syncing=false);}
+  Future<void> edit([Map<String,dynamic>? row]) async {final c={for(final e in widget.fields.entries)e.key:TextEditingController(text:row?[e.key]?.toString()??'')}; final ok=await showDialog<bool>(context:context,builder:(ctx)=>AlertDialog(title:Text(row==null?'Ajouter':'Modifier'),content:SizedBox(width:560,child:ListView(shrinkWrap:true,children:[for(final e in widget.fields.entries)Padding(padding:const EdgeInsets.only(bottom:12),child:TextField(controller:c[e.key],decoration:InputDecoration(labelText:e.value)))])),actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('Annuler')),FilledButton(onPressed:()=>Navigator.pop(ctx,true),child:const Text('Enregistrer'))])); if(ok==true)await ref.read(repoProvider).save(widget.entity,{for(final e in c.entries)e.key:e.value.text},id:row?['id']?.toString());}
+  @override Widget build(BuildContext context)=>Padding(padding:const EdgeInsets.all(24),child:Column(children:[
+    Row(children:[Expanded(child:TextField(onChanged:(v)=>setState(()=>query=v.toLowerCase()),decoration:InputDecoration(prefixIcon:const Icon(Icons.search),hintText:'Rechercher dans ${widget.title}'))),const SizedBox(width:12),OutlinedButton.icon(onPressed:syncing?null:sync,icon:syncing?const SizedBox(width:16,height:16,child:CircularProgressIndicator(strokeWidth:2)):const Icon(Icons.sync),label:const Text('Synchroniser')),const SizedBox(width:12),FilledButton.icon(onPressed:()=>edit(),icon:const Icon(Icons.add),label:const Text('Ajouter'))]),const SizedBox(height:18),
+    Expanded(child:StreamBuilder<List<Map<String,dynamic>>>(stream:ref.read(repoProvider).watch(widget.entity),builder:(context,s){final rows=(s.data??[]).where((r)=>r.values.join(' ').toLowerCase().contains(query)).toList(); if(!s.hasData)return const Center(child:CircularProgressIndicator()); if(rows.isEmpty)return const Center(child:Text('Aucune donnée locale. Cliquez sur Synchroniser ou Ajouter.')); return Card(child:ListView.separated(itemCount:rows.length,separatorBuilder:(_,__)=>const Divider(height:1),itemBuilder:(ctx,i){final r=rows[i]; final status=r['_sync_status']; return ListTile(leading:CircleAvatar(child:Text((r['nom']??r['numero_dossier']??r['code']??'?').toString().substring(0,1).toUpperCase())),title:Text((r['nom']??r['numero_dossier']??r['libelle']??r['code']??r['id']).toString(),style:const TextStyle(fontWeight:FontWeight.w600)),subtitle:Text(widget.fields.keys.where((k)=>r[k]!=null&&r[k].toString().isNotEmpty).map((k)=>'${widget.fields[k]} : ${r[k]}').join('  •  '),maxLines:2),trailing:Wrap(crossAxisAlignment:WrapCrossAlignment.center,children:[Chip(avatar:Icon(status=='synced'?Icons.cloud_done:status=='error'?Icons.cloud_off:Icons.cloud_upload,size:16),label:Text(status??'local')),IconButton(tooltip:'Modifier',onPressed:()=>edit(r),icon:const Icon(Icons.edit_outlined)),IconButton(tooltip:'Supprimer',onPressed:()=>ref.read(repoProvider).remove(widget.entity,r),icon:const Icon(Icons.delete_outline))]));}));}))
+  ]));}
+}

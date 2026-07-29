@@ -67,9 +67,8 @@ class SyncService {
       await db.delete(db.syncQueue).go();
     }
 
-    final lastSync = DateTime.fromMillisecondsSinceEpoch(0)
-        .toUtc()
-        .toIso8601String();
+    final lastSync =
+        DateTime.fromMillisecondsSinceEpoch(0).toUtc().toIso8601String();
 
     final response = await api.dio.get(
       '/sync/pull',
@@ -97,7 +96,8 @@ class SyncService {
                 ),
                 deletedAt: Value(
                   DateTime.tryParse(row['deleted_at']?.toString() ?? ''),
-                ), tableName: '',
+                ),
+                tableName: '',
               ),
             );
       }
