@@ -22,12 +22,10 @@ class ApiClient {
       String path, {
         Map<String, String>? query,
         bool authenticated = true,
-      }) async {
-    final Uri uri = _uri(path, query);
-
+      }) {
     return _send(
       'GET',
-      uri,
+      _uri(path, query),
       authenticated: authenticated,
     );
   }
@@ -36,7 +34,7 @@ class ApiClient {
       String path, {
         Map<String, dynamic>? body,
         bool authenticated = true,
-      }) async {
+      }) {
     return _send(
       'POST',
       _uri(path),
@@ -49,7 +47,7 @@ class ApiClient {
       String path, {
         Map<String, dynamic>? body,
         bool authenticated = true,
-      }) async {
+      }) {
     return _send(
       'PUT',
       _uri(path),
@@ -62,7 +60,7 @@ class ApiClient {
       String path, {
         Map<String, dynamic>? body,
         bool authenticated = true,
-      }) async {
+      }) {
     return _send(
       'PATCH',
       _uri(path),
@@ -73,11 +71,13 @@ class ApiClient {
 
   Future<Map<String, dynamic>> delete(
       String path, {
+        Map<String, dynamic>? body,
         bool authenticated = true,
-      }) async {
+      }) {
     return _send(
       'DELETE',
       _uri(path),
+      body: body,
       authenticated: authenticated,
     );
   }
@@ -88,24 +88,32 @@ class ApiClient {
         Map<String, dynamic>? body,
         required bool authenticated,
       }) async {
-    final Map<String, String> headers = {
+    final headers = <String, String>{
       HttpHeaders.acceptHeader: 'application/json',
-      HttpHeaders.contentTypeHeader:
-      'application/json; charset=utf-8',
+      HttpHeaders.contentTypeHeader: 'application/json; charset=utf-8',
     };
 
-    if (authenticated) {
-      final String? token =
-      await _sessionStore.readAccessToken();
+    String? token;
 
-      if (token != null && token.isNotEmpty) {
-        headers[HttpHeaders.authorizationHeader] =
-        'Bearer $token';
+    if (authenticated) {
+      token = await _sessionStore.readAccessToken();
+
+      if (token == null ||
+          token.trim().isEmpty ||
+          token.trim().toLowerCase() == 'null') {
+        throw const ApiException(
+          'Aucune session valide n’a été trouvée. '
+              'Veuillez vous reconnecter.',
+          statusCode: 401,
+        );
       }
+
+      token = token.trim();
+
+      headers[HttpHeaders.authorizationHeader] = 'Bearer $token';
     }
 
-    final String? encodedBody =
-    body == null ? null : jsonEncode(body);
+    final encodedBody = body == null ? null : jsonEncode(body);
 
     developer.log(
       '=============================================',
@@ -123,6 +131,11 @@ class ApiClient {
     );
 
     developer.log(
+      'Jeton présent : ${token != null && token.isNotEmpty}',
+      name: 'SIGP.API',
+    );
+
+    developer.log(
       'Corps envoyé : ${_sanitizeBody(body)}',
       name: 'SIGP.API',
     );
@@ -130,41 +143,12 @@ class ApiClient {
     late final http.Response response;
 
     try {
-      response = switch (method) {
-        'POST' => await _client
-            .post(
-          uri,
-          headers: headers,
-          body: encodedBody,
-        )
-            .timeout(ApiConfig.timeout),
-        'PUT' => await _client
-            .put(
-          uri,
-          headers: headers,
-          body: encodedBody,
-        )
-            .timeout(ApiConfig.timeout),
-        'PATCH' => await _client
-            .patch(
-          uri,
-          headers: headers,
-          body: encodedBody,
-        )
-            .timeout(ApiConfig.timeout),
-        'DELETE' => await _client
-            .delete(
-          uri,
-          headers: headers,
-        )
-            .timeout(ApiConfig.timeout),
-        _ => await _client
-            .get(
-          uri,
-          headers: headers,
-        )
-            .timeout(ApiConfig.timeout),
-      };
+      response = await _executeRequest(
+        method: method,
+        uri: uri,
+        headers: headers,
+        encodedBody: encodedBody,
+      ).timeout(ApiConfig.timeout);
     } on TimeoutException catch (error, stackTrace) {
       developer.log(
         'Délai de réponse dépassé.',
@@ -174,7 +158,8 @@ class ApiClient {
       );
 
       throw const ApiException(
-        'Le serveur met trop de temps à répondre.',
+        'Le serveur met trop de temps à répondre. '
+            'Vérifiez votre connexion et réessayez.',
       );
     } on SocketException catch (error, stackTrace) {
       developer.log(
@@ -185,7 +170,9 @@ class ApiClient {
       );
 
       throw const ApiException(
-        'Serveur inaccessible. Vérifiez la connexion.',
+        'Impossible de joindre le serveur. '
+            'Vérifiez votre connexion Internet ou assurez-vous '
+            'que le serveur local est démarré.',
       );
     } on HttpException catch (error, stackTrace) {
       developer.log(
@@ -196,19 +183,21 @@ class ApiClient {
       );
 
       throw const ApiException(
-        'Erreur de communication avec le serveur.',
+        'Une erreur de communication avec le serveur est survenue.',
       );
     } on FormatException catch (error, stackTrace) {
       developer.log(
-        'Format de réponse invalide.',
+        'Format de données invalide.',
         name: 'SIGP.API',
         error: error,
         stackTrace: stackTrace,
       );
 
       throw const ApiException(
-        'Réponse invalide du serveur.',
+        'Les données envoyées ou reçues sont invalides.',
       );
+    } on ApiException {
+      rethrow;
     } catch (error, stackTrace) {
       developer.log(
         'Erreur inattendue pendant la requête.',
@@ -218,7 +207,7 @@ class ApiClient {
       );
 
       throw ApiException(
-        'Erreur inattendue : $error',
+        'Une erreur inattendue est survenue : $error',
       );
     }
 
@@ -232,13 +221,33 @@ class ApiClient {
       name: 'SIGP.API',
     );
 
-    final Map<String, dynamic> decoded =
-    _decodeSafely(response.body);
+    final decoded = _decodeSafely(response.body);
 
-    if (response.statusCode < 200 ||
-        response.statusCode >= 300) {
-      final String detailedMessage =
-      _buildErrorMessage(
+    if (response.statusCode == 401) {
+      await _sessionStore.clear();
+
+      developer.log(
+        'Session supprimée après une réponse HTTP 401.',
+        name: 'SIGP.API',
+      );
+
+      developer.log(
+        '=============================================',
+        name: 'SIGP.API',
+      );
+
+      throw ApiException(
+        decoded['message']?.toString().trim().isNotEmpty == true
+            ? '${decoded['message']}\nVeuillez vous reconnecter.'
+            : 'Votre session est invalide ou expirée. '
+            'Veuillez vous reconnecter.',
+        statusCode: 401,
+        errors: _extractErrors(decoded),
+      );
+    }
+
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      final detailedMessage = _buildErrorMessage(
         decoded,
         response.statusCode,
       );
@@ -256,11 +265,7 @@ class ApiClient {
       throw ApiException(
         detailedMessage,
         statusCode: response.statusCode,
-        errors: decoded['errors']
-        is Map<String, dynamic>
-            ? decoded['errors']
-        as Map<String, dynamic>
-            : null,
+        errors: _extractErrors(decoded),
       );
     }
 
@@ -277,122 +282,183 @@ class ApiClient {
     return decoded;
   }
 
+  Future<http.Response> _executeRequest({
+    required String method,
+    required Uri uri,
+    required Map<String, String> headers,
+    required String? encodedBody,
+  }) {
+    switch (method) {
+      case 'POST':
+        return _client.post(
+          uri,
+          headers: headers,
+          body: encodedBody,
+        );
+
+      case 'PUT':
+        return _client.put(
+          uri,
+          headers: headers,
+          body: encodedBody,
+        );
+
+      case 'PATCH':
+        return _client.patch(
+          uri,
+          headers: headers,
+          body: encodedBody,
+        );
+
+      case 'DELETE':
+        return _client.delete(
+          uri,
+          headers: headers,
+          body: encodedBody,
+        );
+
+      case 'GET':
+      default:
+        return _client.get(
+          uri,
+          headers: headers,
+        );
+    }
+  }
+
+  Map<String, dynamic>? _extractErrors(
+      Map<String, dynamic> decoded,
+      ) {
+    final errors = decoded['errors'];
+
+    if (errors is Map<String, dynamic>) {
+      return errors;
+    }
+
+    if (errors is Map) {
+      return Map<String, dynamic>.from(errors);
+    }
+
+    return null;
+  }
+
   String _buildErrorMessage(
       Map<String, dynamic> decoded,
       int statusCode,
       ) {
-    final String message =
-    decoded['message']
-        ?.toString()
-        .trim()
-        .isNotEmpty ==
-        true
-        ? decoded['message']
-        .toString()
-        .trim()
-        : 'Erreur serveur.';
+    final serverMessage = decoded['message']?.toString().trim();
 
-    final String? technicalError =
-    decoded['error']?.toString().trim();
+    final message = serverMessage != null && serverMessage.isNotEmpty
+        ? serverMessage
+        : _defaultMessageForStatus(statusCode);
 
-    final String? file =
-    decoded['file']?.toString().trim();
+    final technicalError = decoded['error']?.toString().trim();
+    final file = decoded['file']?.toString().trim();
+    final line = decoded['line']?.toString().trim();
 
-    final String? line =
-    decoded['line']?.toString().trim();
-
-    final StringBuffer result =
-    StringBuffer(message);
+    final result = StringBuffer(message);
 
     if (technicalError != null &&
         technicalError.isNotEmpty &&
         technicalError.toLowerCase() != 'null') {
-      result.write(
-        '\n\nErreur technique : $technicalError',
-      );
+      result.write('\n\nErreur technique : $technicalError');
     }
 
     if (file != null &&
         file.isNotEmpty &&
         file.toLowerCase() != 'null') {
-      result.write(
-        '\nFichier : $file',
-      );
+      result.write('\nFichier : $file');
     }
 
     if (line != null &&
         line.isNotEmpty &&
         line.toLowerCase() != 'null') {
-      result.write(
-        '\nLigne : $line',
-      );
+      result.write('\nLigne : $line');
     }
 
-    result.write(
-      '\nCode HTTP : $statusCode',
-    );
+    result.write('\nCode HTTP : $statusCode');
 
     return result.toString();
+  }
+
+  String _defaultMessageForStatus(int statusCode) {
+    switch (statusCode) {
+      case 400:
+        return 'Les informations envoyées sont invalides.';
+
+      case 401:
+        return 'Votre session est invalide ou expirée.';
+
+      case 403:
+        return 'Vous n’avez pas l’autorisation d’effectuer cette opération.';
+
+      case 404:
+        return 'La ressource demandée est introuvable.';
+
+      case 409:
+        return 'Cette donnée existe déjà ou provoque un conflit.';
+
+      case 422:
+        return 'Certains champs du formulaire sont invalides.';
+
+      case 500:
+        return 'Une erreur interne est survenue sur le serveur.';
+
+      case 502:
+      case 503:
+      case 504:
+        return 'Le serveur est temporairement indisponible.';
+
+      default:
+        return 'La requête a échoué.';
+    }
   }
 
   Uri _uri(
       String path, [
         Map<String, String>? query,
       ]) {
-    final String normalized =
-    path.startsWith('/')
-        ? path
-        : '/$path';
+    final normalized = path.startsWith('/') ? path : '/$path';
 
     return Uri.parse(
       '${ApiConfig.baseUrl}$normalized',
     ).replace(
-      queryParameters:
-      query?.isEmpty == true ? null : query,
+      queryParameters: query == null || query.isEmpty ? null : query,
     );
   }
 
-  Map<String, dynamic> _decodeSafely(
-      String body,
-      ) {
+  Map<String, dynamic> _decodeSafely(String body) {
     if (body.trim().isEmpty) {
       return <String, dynamic>{};
     }
 
     try {
-      final dynamic value = jsonDecode(body);
+      final value = jsonDecode(body);
 
       if (value is Map<String, dynamic>) {
         return value;
       }
 
       if (value is Map) {
-        return Map<String, dynamic>.from(
-          value,
-        );
+        return Map<String, dynamic>.from(value);
       }
 
       return <String, dynamic>{
-        'message':
-        'Format de réponse inattendu.',
+        'message': 'Format de réponse inattendu.',
         'error': value.toString(),
       };
-    } on FormatException catch (
-    error,
-    stackTrace
-    ) {
-    developer.log(
-    'Le serveur n’a pas retourné du JSON.',
-    name: 'SIGP.API',
-    error: error,
-    stackTrace: stackTrace,
-    );
+    } on FormatException catch (error, stackTrace) {
+      developer.log(
+        'Le serveur n’a pas retourné du JSON.',
+        name: 'SIGP.API',
+        error: error,
+        stackTrace: stackTrace,
+      );
 
-    return <String, dynamic>{
-    'message':
-    'Le serveur a retourné une réponse non JSON.',
-    'error': body,
-    };
+      return <String, dynamic>{
+        'message': 'Le serveur a retourné une réponse non JSON.',
+        'error': body,
+      };
     }
   }
 
@@ -403,30 +469,33 @@ class ApiClient {
       return null;
     }
 
-    final Map<String, dynamic> sanitized =
-    Map<String, dynamic>.from(body);
+    final sanitized = Map<String, dynamic>.from(body);
 
-    const List<String> sensitiveFields = [
+    const sensitiveFields = <String>[
       'password',
+      'password_confirmation',
       'mot_de_passe',
       'access_token',
       'refresh_token',
       'token',
     ];
 
-    for (final String field
-    in sensitiveFields) {
-      if (sanitized.containsKey(field)) {
-        final dynamic value =
-        sanitized[field];
-
-        sanitized[field] =
-        value is String
-            ? '[MASQUÉ - ${value.length} caractères]'
-            : '[MASQUÉ]';
+    for (final field in sensitiveFields) {
+      if (!sanitized.containsKey(field)) {
+        continue;
       }
+
+      final value = sanitized[field];
+
+      sanitized[field] = value is String
+          ? '[MASQUÉ - ${value.length} caractères]'
+          : '[MASQUÉ]';
     }
 
     return sanitized;
+  }
+
+  void close() {
+    _client.close();
   }
 }
