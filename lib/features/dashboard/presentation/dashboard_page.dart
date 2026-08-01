@@ -1,56 +1,11 @@
 import 'package:flutter/material.dart';
+import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/pro_widgets.dart';
 
-class DashboardPage extends StatelessWidget {
-  const DashboardPage({super.key});
-  @override
-  Widget build(BuildContext context) => Scaffold(
-      appBar: AppBar(title: const Text('SIGP+ — Tableau de bord')),
-      body: Row(children: [
-        NavigationRail(
-            extended: true,
-            destinations: const [
-              NavigationRailDestination(
-                  icon: Icon(Icons.dashboard), label: Text('Tableau de bord')),
-              NavigationRailDestination(
-                  icon: Icon(Icons.folder), label: Text('Dossiers')),
-              NavigationRailDestination(
-                  icon: Icon(Icons.people), label: Text('Personnes')),
-              NavigationRailDestination(
-                  icon: Icon(Icons.description), label: Text('Documents')),
-              NavigationRailDestination(
-                  icon: Icon(Icons.settings), label: Text('Administration'))
-            ],
-            selectedIndex: 0),
-        const VerticalDivider(width: 1),
-        Expanded(
-            child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: GridView.count(
-                    crossAxisCount: 4,
-                    crossAxisSpacing: 16,
-                    mainAxisSpacing: 16,
-                    children: const [
-                      _Card('Dossiers', '0', Icons.folder),
-                      _Card('En cours', '0', Icons.pending_actions),
-                      _Card('Rejetés', '0', Icons.cancel),
-                      _Card('Liquidés', '0', Icons.verified)
-                    ])))
-      ]));
-}
-
-class _Card extends StatelessWidget {
-  final String label, value;
-  final IconData icon;
-  const _Card(this.label, this.value, this.icon);
-  @override
-  Widget build(BuildContext c) => Card(
-      child: Padding(
-          padding: const EdgeInsets.all(20),
-          child:
-              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Icon(icon, size: 34),
-            const Spacer(),
-            Text(value, style: Theme.of(c).textTheme.headlineLarge),
-            Text(label)
-          ])));
+class DashboardPage extends StatelessWidget { const DashboardPage({super.key});
+ @override Widget build(BuildContext context)=>ListView(padding:const EdgeInsets.all(24),children:[
+  const PageHeader(title:'Tableau de bord institutionnel',subtitle:'Pilotage des pensions, contrôles, documents, synchronisations et délais.'),const SizedBox(height:20),
+  const Wrap(spacing:14,runSpacing:14,children:[MetricCard(label:'Total dossiers',value:'1 248',icon:Icons.folder_copy_outlined,note:'+8,4 % ce mois'),MetricCard(label:'Créés aujourd’hui',value:'28',icon:Icons.add_task,note:'12 affectés'),MetricCard(label:'Incomplets',value:'64',icon:Icons.fact_check_outlined,note:'37 pièces manquantes',alert:true),MetricCard(label:'Liquidés',value:'742',icon:Icons.calculate_outlined,note:'+54 cette semaine'),MetricCard(label:'OCR en attente',value:'19',icon:Icons.document_scanner_outlined,note:'File automatique'),MetricCard(label:'Erreurs de sync',value:'3',icon:Icons.sync_problem,note:'À résoudre',alert:true)]),
+  const SizedBox(height:18),Row(crossAxisAlignment:CrossAxisAlignment.start,children:[Expanded(flex:3,child:Card(child:Padding(padding:const EdgeInsets.all(20),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('Volume par statut',style:TextStyle(fontSize:18,fontWeight:FontWeight.bold,color:AppTheme.navy)),const SizedBox(height:18),for(final x in const [('EN COURS',.72,'386'),('EN ATTENTE COMPLÉMENT',.38,'124'),('VALIDÉS',.86,'742'),('REJETÉS',.18,'37'),('ARCHIVÉS',.55,'428')])Padding(padding:const EdgeInsets.only(bottom:14),child:Column(children:[Row(children:[Expanded(child:Text(x.$1)),Text(x.$3,style:const TextStyle(fontWeight:FontWeight.bold))]),const SizedBox(height:6),LinearProgressIndicator(value:x.$2,minHeight:8,borderRadius:BorderRadius.circular(8))]))])))),const SizedBox(width:18),Expanded(flex:2,child:Card(child:Padding(padding:const EdgeInsets.all(20),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('Alertes opérationnelles',style:TextStyle(fontSize:18,fontWeight:FontWeight.bold,color:AppTheme.navy)),const SizedBox(height:10),for(final a in const [('12 dossiers urgents','Délai inférieur à 24 h'),('7 documents expirés','Renouvellement requis'),('3 conflits de synchronisation','Validation manuelle'),('5 signatures en attente','Direction générale')])ListTile(contentPadding:EdgeInsets.zero,leading:const CircleAvatar(child:Icon(Icons.priority_high)),title:Text(a.$1),subtitle:Text(a.$2))]))))])
+ ]);
 }

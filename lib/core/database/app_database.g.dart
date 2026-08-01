@@ -3,22 +3,22 @@
 part of 'app_database.dart';
 
 // ignore_for_file: type=lint
-class $LocalRecordsTable extends LocalRecords
-    with TableInfo<$LocalRecordsTable, LocalRecord> {
+class $LocalEntitiesTable extends LocalEntities
+    with TableInfo<$LocalEntitiesTable, LocalEntity> {
   @override
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
-  $LocalRecordsTable(this.attachedDatabase, [this._alias]);
+  $LocalEntitiesTable(this.attachedDatabase, [this._alias]);
   static const VerificationMeta _idMeta = const VerificationMeta('id');
   @override
   late final GeneratedColumn<String> id = GeneratedColumn<String>(
       'id', aliasedName, false,
       type: DriftSqlType.string, requiredDuringInsert: true);
-  static const VerificationMeta _tableNameMeta =
-      const VerificationMeta('tableName');
+  static const VerificationMeta _entityNameMeta =
+      const VerificationMeta('entityName');
   @override
-  late final GeneratedColumn<String> tableName = GeneratedColumn<String>(
-      'table_name', aliasedName, false,
+  late final GeneratedColumn<String> entityName = GeneratedColumn<String>(
+      'entity_name', aliasedName, false,
       type: DriftSqlType.string, requiredDuringInsert: true);
   static const VerificationMeta _payloadMeta =
       const VerificationMeta('payload');
@@ -26,6 +26,14 @@ class $LocalRecordsTable extends LocalRecords
   late final GeneratedColumn<String> payload = GeneratedColumn<String>(
       'payload', aliasedName, false,
       type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _versionMeta =
+      const VerificationMeta('version');
+  @override
+  late final GeneratedColumn<int> version = GeneratedColumn<int>(
+      'version', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(1));
   static const VerificationMeta _syncStatusMeta =
       const VerificationMeta('syncStatus');
   @override
@@ -61,8 +69,9 @@ class $LocalRecordsTable extends LocalRecords
   @override
   List<GeneratedColumn> get $columns => [
         id,
-        tableName,
+        entityName,
         payload,
+        version,
         syncStatus,
         syncError,
         localUpdatedAt,
@@ -73,9 +82,9 @@ class $LocalRecordsTable extends LocalRecords
   String get aliasedName => _alias ?? actualTableName;
   @override
   String get actualTableName => $name;
-  static const String $name = 'local_records';
+  static const String $name = 'local_entities';
   @override
-  VerificationContext validateIntegrity(Insertable<LocalRecord> instance,
+  VerificationContext validateIntegrity(Insertable<LocalEntity> instance,
       {bool isInserting = false}) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
@@ -84,17 +93,23 @@ class $LocalRecordsTable extends LocalRecords
     } else if (isInserting) {
       context.missing(_idMeta);
     }
-    if (data.containsKey('table_name')) {
-      context.handle(_tableNameMeta,
-          tableName.isAcceptableOrUnknown(data['table_name']!, _tableNameMeta));
+    if (data.containsKey('entity_name')) {
+      context.handle(
+          _entityNameMeta,
+          entityName.isAcceptableOrUnknown(
+              data['entity_name']!, _entityNameMeta));
     } else if (isInserting) {
-      context.missing(_tableNameMeta);
+      context.missing(_entityNameMeta);
     }
     if (data.containsKey('payload')) {
       context.handle(_payloadMeta,
           payload.isAcceptableOrUnknown(data['payload']!, _payloadMeta));
     } else if (isInserting) {
       context.missing(_payloadMeta);
+    }
+    if (data.containsKey('version')) {
+      context.handle(_versionMeta,
+          version.isAcceptableOrUnknown(data['version']!, _versionMeta));
     }
     if (data.containsKey('sync_status')) {
       context.handle(
@@ -128,17 +143,19 @@ class $LocalRecordsTable extends LocalRecords
   }
 
   @override
-  Set<GeneratedColumn> get $primaryKey => {id, tableName};
+  Set<GeneratedColumn> get $primaryKey => {id, entityName};
   @override
-  LocalRecord map(Map<String, dynamic> data, {String? tablePrefix}) {
+  LocalEntity map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return LocalRecord(
+    return LocalEntity(
       id: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
-      tableName: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}table_name'])!,
+      entityName: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}entity_name'])!,
       payload: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}payload'])!,
+      version: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}version'])!,
       syncStatus: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}sync_status'])!,
       syncError: attachedDatabase.typeMapping
@@ -153,24 +170,26 @@ class $LocalRecordsTable extends LocalRecords
   }
 
   @override
-  $LocalRecordsTable createAlias(String alias) {
-    return $LocalRecordsTable(attachedDatabase, alias);
+  $LocalEntitiesTable createAlias(String alias) {
+    return $LocalEntitiesTable(attachedDatabase, alias);
   }
 }
 
-class LocalRecord extends DataClass implements Insertable<LocalRecord> {
+class LocalEntity extends DataClass implements Insertable<LocalEntity> {
   final String id;
-  final String tableName;
+  final String entityName;
   final String payload;
+  final int version;
   final String syncStatus;
   final String? syncError;
   final DateTime localUpdatedAt;
   final DateTime? serverUpdatedAt;
   final DateTime? deletedAt;
-  const LocalRecord(
+  const LocalEntity(
       {required this.id,
-      required this.tableName,
+      required this.entityName,
       required this.payload,
+      required this.version,
       required this.syncStatus,
       this.syncError,
       required this.localUpdatedAt,
@@ -180,8 +199,9 @@ class LocalRecord extends DataClass implements Insertable<LocalRecord> {
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<String>(id);
-    map['table_name'] = Variable<String>(tableName);
+    map['entity_name'] = Variable<String>(entityName);
     map['payload'] = Variable<String>(payload);
+    map['version'] = Variable<int>(version);
     map['sync_status'] = Variable<String>(syncStatus);
     if (!nullToAbsent || syncError != null) {
       map['sync_error'] = Variable<String>(syncError);
@@ -196,11 +216,12 @@ class LocalRecord extends DataClass implements Insertable<LocalRecord> {
     return map;
   }
 
-  LocalRecordsCompanion toCompanion(bool nullToAbsent) {
-    return LocalRecordsCompanion(
+  LocalEntitiesCompanion toCompanion(bool nullToAbsent) {
+    return LocalEntitiesCompanion(
       id: Value(id),
-      tableName: Value(tableName),
+      entityName: Value(entityName),
       payload: Value(payload),
+      version: Value(version),
       syncStatus: Value(syncStatus),
       syncError: syncError == null && nullToAbsent
           ? const Value.absent()
@@ -215,13 +236,14 @@ class LocalRecord extends DataClass implements Insertable<LocalRecord> {
     );
   }
 
-  factory LocalRecord.fromJson(Map<String, dynamic> json,
+  factory LocalEntity.fromJson(Map<String, dynamic> json,
       {ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
-    return LocalRecord(
+    return LocalEntity(
       id: serializer.fromJson<String>(json['id']),
-      tableName: serializer.fromJson<String>(json['tableName']),
+      entityName: serializer.fromJson<String>(json['entityName']),
       payload: serializer.fromJson<String>(json['payload']),
+      version: serializer.fromJson<int>(json['version']),
       syncStatus: serializer.fromJson<String>(json['syncStatus']),
       syncError: serializer.fromJson<String?>(json['syncError']),
       localUpdatedAt: serializer.fromJson<DateTime>(json['localUpdatedAt']),
@@ -234,8 +256,9 @@ class LocalRecord extends DataClass implements Insertable<LocalRecord> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
       'id': serializer.toJson<String>(id),
-      'tableName': serializer.toJson<String>(tableName),
+      'entityName': serializer.toJson<String>(entityName),
       'payload': serializer.toJson<String>(payload),
+      'version': serializer.toJson<int>(version),
       'syncStatus': serializer.toJson<String>(syncStatus),
       'syncError': serializer.toJson<String?>(syncError),
       'localUpdatedAt': serializer.toJson<DateTime>(localUpdatedAt),
@@ -244,19 +267,21 @@ class LocalRecord extends DataClass implements Insertable<LocalRecord> {
     };
   }
 
-  LocalRecord copyWith(
+  LocalEntity copyWith(
           {String? id,
-          String? tableName,
+          String? entityName,
           String? payload,
+          int? version,
           String? syncStatus,
           Value<String?> syncError = const Value.absent(),
           DateTime? localUpdatedAt,
           Value<DateTime?> serverUpdatedAt = const Value.absent(),
           Value<DateTime?> deletedAt = const Value.absent()}) =>
-      LocalRecord(
+      LocalEntity(
         id: id ?? this.id,
-        tableName: tableName ?? this.tableName,
+        entityName: entityName ?? this.entityName,
         payload: payload ?? this.payload,
+        version: version ?? this.version,
         syncStatus: syncStatus ?? this.syncStatus,
         syncError: syncError.present ? syncError.value : this.syncError,
         localUpdatedAt: localUpdatedAt ?? this.localUpdatedAt,
@@ -265,11 +290,13 @@ class LocalRecord extends DataClass implements Insertable<LocalRecord> {
             : this.serverUpdatedAt,
         deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
       );
-  LocalRecord copyWithCompanion(LocalRecordsCompanion data) {
-    return LocalRecord(
+  LocalEntity copyWithCompanion(LocalEntitiesCompanion data) {
+    return LocalEntity(
       id: data.id.present ? data.id.value : this.id,
-      tableName: data.tableName.present ? data.tableName.value : this.tableName,
+      entityName:
+          data.entityName.present ? data.entityName.value : this.entityName,
       payload: data.payload.present ? data.payload.value : this.payload,
+      version: data.version.present ? data.version.value : this.version,
       syncStatus:
           data.syncStatus.present ? data.syncStatus.value : this.syncStatus,
       syncError: data.syncError.present ? data.syncError.value : this.syncError,
@@ -285,10 +312,11 @@ class LocalRecord extends DataClass implements Insertable<LocalRecord> {
 
   @override
   String toString() {
-    return (StringBuffer('LocalRecord(')
+    return (StringBuffer('LocalEntity(')
           ..write('id: $id, ')
-          ..write('tableName: $tableName, ')
+          ..write('entityName: $entityName, ')
           ..write('payload: $payload, ')
+          ..write('version: $version, ')
           ..write('syncStatus: $syncStatus, ')
           ..write('syncError: $syncError, ')
           ..write('localUpdatedAt: $localUpdatedAt, ')
@@ -299,15 +327,16 @@ class LocalRecord extends DataClass implements Insertable<LocalRecord> {
   }
 
   @override
-  int get hashCode => Object.hash(id, tableName, payload, syncStatus, syncError,
-      localUpdatedAt, serverUpdatedAt, deletedAt);
+  int get hashCode => Object.hash(id, entityName, payload, version, syncStatus,
+      syncError, localUpdatedAt, serverUpdatedAt, deletedAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      (other is LocalRecord &&
+      (other is LocalEntity &&
           other.id == this.id &&
-          other.tableName == this.tableName &&
+          other.entityName == this.entityName &&
           other.payload == this.payload &&
+          other.version == this.version &&
           other.syncStatus == this.syncStatus &&
           other.syncError == this.syncError &&
           other.localUpdatedAt == this.localUpdatedAt &&
@@ -315,20 +344,22 @@ class LocalRecord extends DataClass implements Insertable<LocalRecord> {
           other.deletedAt == this.deletedAt);
 }
 
-class LocalRecordsCompanion extends UpdateCompanion<LocalRecord> {
+class LocalEntitiesCompanion extends UpdateCompanion<LocalEntity> {
   final Value<String> id;
-  final Value<String> tableName;
+  final Value<String> entityName;
   final Value<String> payload;
+  final Value<int> version;
   final Value<String> syncStatus;
   final Value<String?> syncError;
   final Value<DateTime> localUpdatedAt;
   final Value<DateTime?> serverUpdatedAt;
   final Value<DateTime?> deletedAt;
   final Value<int> rowid;
-  const LocalRecordsCompanion({
+  const LocalEntitiesCompanion({
     this.id = const Value.absent(),
-    this.tableName = const Value.absent(),
+    this.entityName = const Value.absent(),
     this.payload = const Value.absent(),
+    this.version = const Value.absent(),
     this.syncStatus = const Value.absent(),
     this.syncError = const Value.absent(),
     this.localUpdatedAt = const Value.absent(),
@@ -336,25 +367,26 @@ class LocalRecordsCompanion extends UpdateCompanion<LocalRecord> {
     this.deletedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
-  LocalRecordsCompanion.insert({
+  LocalEntitiesCompanion.insert({
     required String id,
-    required String tableName,
+    required String entityName,
     required String payload,
+    this.version = const Value.absent(),
     this.syncStatus = const Value.absent(),
     this.syncError = const Value.absent(),
     required DateTime localUpdatedAt,
     this.serverUpdatedAt = const Value.absent(),
     this.deletedAt = const Value.absent(),
     this.rowid = const Value.absent(),
-    required String entityName,
   })  : id = Value(id),
-        tableName = Value(tableName),
+        entityName = Value(entityName),
         payload = Value(payload),
         localUpdatedAt = Value(localUpdatedAt);
-  static Insertable<LocalRecord> custom({
+  static Insertable<LocalEntity> custom({
     Expression<String>? id,
-    Expression<String>? tableName,
+    Expression<String>? entityName,
     Expression<String>? payload,
+    Expression<int>? version,
     Expression<String>? syncStatus,
     Expression<String>? syncError,
     Expression<DateTime>? localUpdatedAt,
@@ -364,8 +396,9 @@ class LocalRecordsCompanion extends UpdateCompanion<LocalRecord> {
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
-      if (tableName != null) 'table_name': tableName,
+      if (entityName != null) 'entity_name': entityName,
       if (payload != null) 'payload': payload,
+      if (version != null) 'version': version,
       if (syncStatus != null) 'sync_status': syncStatus,
       if (syncError != null) 'sync_error': syncError,
       if (localUpdatedAt != null) 'local_updated_at': localUpdatedAt,
@@ -375,20 +408,22 @@ class LocalRecordsCompanion extends UpdateCompanion<LocalRecord> {
     });
   }
 
-  LocalRecordsCompanion copyWith(
+  LocalEntitiesCompanion copyWith(
       {Value<String>? id,
-      Value<String>? tableName,
+      Value<String>? entityName,
       Value<String>? payload,
+      Value<int>? version,
       Value<String>? syncStatus,
       Value<String?>? syncError,
       Value<DateTime>? localUpdatedAt,
       Value<DateTime?>? serverUpdatedAt,
       Value<DateTime?>? deletedAt,
       Value<int>? rowid}) {
-    return LocalRecordsCompanion(
+    return LocalEntitiesCompanion(
       id: id ?? this.id,
-      tableName: tableName ?? this.tableName,
+      entityName: entityName ?? this.entityName,
       payload: payload ?? this.payload,
+      version: version ?? this.version,
       syncStatus: syncStatus ?? this.syncStatus,
       syncError: syncError ?? this.syncError,
       localUpdatedAt: localUpdatedAt ?? this.localUpdatedAt,
@@ -404,11 +439,14 @@ class LocalRecordsCompanion extends UpdateCompanion<LocalRecord> {
     if (id.present) {
       map['id'] = Variable<String>(id.value);
     }
-    if (tableName.present) {
-      map['table_name'] = Variable<String>(tableName.value);
+    if (entityName.present) {
+      map['entity_name'] = Variable<String>(entityName.value);
     }
     if (payload.present) {
       map['payload'] = Variable<String>(payload.value);
+    }
+    if (version.present) {
+      map['version'] = Variable<int>(version.value);
     }
     if (syncStatus.present) {
       map['sync_status'] = Variable<String>(syncStatus.value);
@@ -433,10 +471,11 @@ class LocalRecordsCompanion extends UpdateCompanion<LocalRecord> {
 
   @override
   String toString() {
-    return (StringBuffer('LocalRecordsCompanion(')
+    return (StringBuffer('LocalEntitiesCompanion(')
           ..write('id: $id, ')
-          ..write('tableName: $tableName, ')
+          ..write('entityName: $entityName, ')
           ..write('payload: $payload, ')
+          ..write('version: $version, ')
           ..write('syncStatus: $syncStatus, ')
           ..write('syncError: $syncError, ')
           ..write('localUpdatedAt: $localUpdatedAt, ')
@@ -459,11 +498,11 @@ class $SyncQueueTable extends SyncQueue
   late final GeneratedColumn<String> id = GeneratedColumn<String>(
       'id', aliasedName, false,
       type: DriftSqlType.string, requiredDuringInsert: true);
-  static const VerificationMeta _tableNameMeta =
-      const VerificationMeta('tableName');
+  static const VerificationMeta _entityNameMeta =
+      const VerificationMeta('entityName');
   @override
-  late final GeneratedColumn<String> tableName = GeneratedColumn<String>(
-      'table_name', aliasedName, false,
+  late final GeneratedColumn<String> entityName = GeneratedColumn<String>(
+      'entity_name', aliasedName, false,
       type: DriftSqlType.string, requiredDuringInsert: true);
   static const VerificationMeta _recordIdMeta =
       const VerificationMeta('recordId');
@@ -512,7 +551,7 @@ class $SyncQueueTable extends SyncQueue
   @override
   List<GeneratedColumn> get $columns => [
         id,
-        tableName,
+        entityName,
         recordId,
         operation,
         payload,
@@ -536,11 +575,13 @@ class $SyncQueueTable extends SyncQueue
     } else if (isInserting) {
       context.missing(_idMeta);
     }
-    if (data.containsKey('table_name')) {
-      context.handle(_tableNameMeta,
-          tableName.isAcceptableOrUnknown(data['table_name']!, _tableNameMeta));
+    if (data.containsKey('entity_name')) {
+      context.handle(
+          _entityNameMeta,
+          entityName.isAcceptableOrUnknown(
+              data['entity_name']!, _entityNameMeta));
     } else if (isInserting) {
-      context.missing(_tableNameMeta);
+      context.missing(_entityNameMeta);
     }
     if (data.containsKey('record_id')) {
       context.handle(_recordIdMeta,
@@ -591,8 +632,8 @@ class $SyncQueueTable extends SyncQueue
     return SyncQueueData(
       id: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
-      tableName: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}table_name'])!,
+      entityName: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}entity_name'])!,
       recordId: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}record_id'])!,
       operation: attachedDatabase.typeMapping
@@ -618,7 +659,7 @@ class $SyncQueueTable extends SyncQueue
 
 class SyncQueueData extends DataClass implements Insertable<SyncQueueData> {
   final String id;
-  final String tableName;
+  final String entityName;
   final String recordId;
   final String operation;
   final String? payload;
@@ -628,7 +669,7 @@ class SyncQueueData extends DataClass implements Insertable<SyncQueueData> {
   final DateTime updatedAt;
   const SyncQueueData(
       {required this.id,
-      required this.tableName,
+      required this.entityName,
       required this.recordId,
       required this.operation,
       this.payload,
@@ -640,7 +681,7 @@ class SyncQueueData extends DataClass implements Insertable<SyncQueueData> {
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<String>(id);
-    map['table_name'] = Variable<String>(tableName);
+    map['entity_name'] = Variable<String>(entityName);
     map['record_id'] = Variable<String>(recordId);
     map['operation'] = Variable<String>(operation);
     if (!nullToAbsent || payload != null) {
@@ -658,7 +699,7 @@ class SyncQueueData extends DataClass implements Insertable<SyncQueueData> {
   SyncQueueCompanion toCompanion(bool nullToAbsent) {
     return SyncQueueCompanion(
       id: Value(id),
-      tableName: Value(tableName),
+      entityName: Value(entityName),
       recordId: Value(recordId),
       operation: Value(operation),
       payload: payload == null && nullToAbsent
@@ -678,7 +719,7 @@ class SyncQueueData extends DataClass implements Insertable<SyncQueueData> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return SyncQueueData(
       id: serializer.fromJson<String>(json['id']),
-      tableName: serializer.fromJson<String>(json['tableName']),
+      entityName: serializer.fromJson<String>(json['entityName']),
       recordId: serializer.fromJson<String>(json['recordId']),
       operation: serializer.fromJson<String>(json['operation']),
       payload: serializer.fromJson<String?>(json['payload']),
@@ -693,7 +734,7 @@ class SyncQueueData extends DataClass implements Insertable<SyncQueueData> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
       'id': serializer.toJson<String>(id),
-      'tableName': serializer.toJson<String>(tableName),
+      'entityName': serializer.toJson<String>(entityName),
       'recordId': serializer.toJson<String>(recordId),
       'operation': serializer.toJson<String>(operation),
       'payload': serializer.toJson<String?>(payload),
@@ -706,7 +747,7 @@ class SyncQueueData extends DataClass implements Insertable<SyncQueueData> {
 
   SyncQueueData copyWith(
           {String? id,
-          String? tableName,
+          String? entityName,
           String? recordId,
           String? operation,
           Value<String?> payload = const Value.absent(),
@@ -716,7 +757,7 @@ class SyncQueueData extends DataClass implements Insertable<SyncQueueData> {
           DateTime? updatedAt}) =>
       SyncQueueData(
         id: id ?? this.id,
-        tableName: tableName ?? this.tableName,
+        entityName: entityName ?? this.entityName,
         recordId: recordId ?? this.recordId,
         operation: operation ?? this.operation,
         payload: payload.present ? payload.value : this.payload,
@@ -728,7 +769,8 @@ class SyncQueueData extends DataClass implements Insertable<SyncQueueData> {
   SyncQueueData copyWithCompanion(SyncQueueCompanion data) {
     return SyncQueueData(
       id: data.id.present ? data.id.value : this.id,
-      tableName: data.tableName.present ? data.tableName.value : this.tableName,
+      entityName:
+          data.entityName.present ? data.entityName.value : this.entityName,
       recordId: data.recordId.present ? data.recordId.value : this.recordId,
       operation: data.operation.present ? data.operation.value : this.operation,
       payload: data.payload.present ? data.payload.value : this.payload,
@@ -744,7 +786,7 @@ class SyncQueueData extends DataClass implements Insertable<SyncQueueData> {
   String toString() {
     return (StringBuffer('SyncQueueData(')
           ..write('id: $id, ')
-          ..write('tableName: $tableName, ')
+          ..write('entityName: $entityName, ')
           ..write('recordId: $recordId, ')
           ..write('operation: $operation, ')
           ..write('payload: $payload, ')
@@ -757,14 +799,14 @@ class SyncQueueData extends DataClass implements Insertable<SyncQueueData> {
   }
 
   @override
-  int get hashCode => Object.hash(id, tableName, recordId, operation, payload,
+  int get hashCode => Object.hash(id, entityName, recordId, operation, payload,
       retryCount, lastError, createdAt, updatedAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is SyncQueueData &&
           other.id == this.id &&
-          other.tableName == this.tableName &&
+          other.entityName == this.entityName &&
           other.recordId == this.recordId &&
           other.operation == this.operation &&
           other.payload == this.payload &&
@@ -776,7 +818,7 @@ class SyncQueueData extends DataClass implements Insertable<SyncQueueData> {
 
 class SyncQueueCompanion extends UpdateCompanion<SyncQueueData> {
   final Value<String> id;
-  final Value<String> tableName;
+  final Value<String> entityName;
   final Value<String> recordId;
   final Value<String> operation;
   final Value<String?> payload;
@@ -787,7 +829,7 @@ class SyncQueueCompanion extends UpdateCompanion<SyncQueueData> {
   final Value<int> rowid;
   const SyncQueueCompanion({
     this.id = const Value.absent(),
-    this.tableName = const Value.absent(),
+    this.entityName = const Value.absent(),
     this.recordId = const Value.absent(),
     this.operation = const Value.absent(),
     this.payload = const Value.absent(),
@@ -799,7 +841,7 @@ class SyncQueueCompanion extends UpdateCompanion<SyncQueueData> {
   });
   SyncQueueCompanion.insert({
     required String id,
-    required String tableName,
+    required String entityName,
     required String recordId,
     required String operation,
     this.payload = const Value.absent(),
@@ -809,14 +851,14 @@ class SyncQueueCompanion extends UpdateCompanion<SyncQueueData> {
     required DateTime updatedAt,
     this.rowid = const Value.absent(),
   })  : id = Value(id),
-        tableName = Value(tableName),
+        entityName = Value(entityName),
         recordId = Value(recordId),
         operation = Value(operation),
         createdAt = Value(createdAt),
         updatedAt = Value(updatedAt);
   static Insertable<SyncQueueData> custom({
     Expression<String>? id,
-    Expression<String>? tableName,
+    Expression<String>? entityName,
     Expression<String>? recordId,
     Expression<String>? operation,
     Expression<String>? payload,
@@ -828,7 +870,7 @@ class SyncQueueCompanion extends UpdateCompanion<SyncQueueData> {
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
-      if (tableName != null) 'table_name': tableName,
+      if (entityName != null) 'entity_name': entityName,
       if (recordId != null) 'record_id': recordId,
       if (operation != null) 'operation': operation,
       if (payload != null) 'payload': payload,
@@ -842,7 +884,7 @@ class SyncQueueCompanion extends UpdateCompanion<SyncQueueData> {
 
   SyncQueueCompanion copyWith(
       {Value<String>? id,
-      Value<String>? tableName,
+      Value<String>? entityName,
       Value<String>? recordId,
       Value<String>? operation,
       Value<String?>? payload,
@@ -853,7 +895,7 @@ class SyncQueueCompanion extends UpdateCompanion<SyncQueueData> {
       Value<int>? rowid}) {
     return SyncQueueCompanion(
       id: id ?? this.id,
-      tableName: tableName ?? this.tableName,
+      entityName: entityName ?? this.entityName,
       recordId: recordId ?? this.recordId,
       operation: operation ?? this.operation,
       payload: payload ?? this.payload,
@@ -871,8 +913,8 @@ class SyncQueueCompanion extends UpdateCompanion<SyncQueueData> {
     if (id.present) {
       map['id'] = Variable<String>(id.value);
     }
-    if (tableName.present) {
-      map['table_name'] = Variable<String>(tableName.value);
+    if (entityName.present) {
+      map['entity_name'] = Variable<String>(entityName.value);
     }
     if (recordId.present) {
       map['record_id'] = Variable<String>(recordId.value);
@@ -905,7 +947,7 @@ class SyncQueueCompanion extends UpdateCompanion<SyncQueueData> {
   String toString() {
     return (StringBuffer('SyncQueueCompanion(')
           ..write('id: $id, ')
-          ..write('tableName: $tableName, ')
+          ..write('entityName: $entityName, ')
           ..write('recordId: $recordId, ')
           ..write('operation: $operation, ')
           ..write('payload: $payload, ')
@@ -922,20 +964,22 @@ class SyncQueueCompanion extends UpdateCompanion<SyncQueueData> {
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
-  late final $LocalRecordsTable localRecords = $LocalRecordsTable(this);
+  late final $LocalEntitiesTable localEntities = $LocalEntitiesTable(this);
   late final $SyncQueueTable syncQueue = $SyncQueueTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
   @override
-  List<DatabaseSchemaEntity> get allSchemaEntities => [localRecords, syncQueue];
+  List<DatabaseSchemaEntity> get allSchemaEntities =>
+      [localEntities, syncQueue];
 }
 
-typedef $$LocalRecordsTableCreateCompanionBuilder = LocalRecordsCompanion
+typedef $$LocalEntitiesTableCreateCompanionBuilder = LocalEntitiesCompanion
     Function({
   required String id,
-  required String tableName,
+  required String entityName,
   required String payload,
+  Value<int> version,
   Value<String> syncStatus,
   Value<String?> syncError,
   required DateTime localUpdatedAt,
@@ -943,11 +987,12 @@ typedef $$LocalRecordsTableCreateCompanionBuilder = LocalRecordsCompanion
   Value<DateTime?> deletedAt,
   Value<int> rowid,
 });
-typedef $$LocalRecordsTableUpdateCompanionBuilder = LocalRecordsCompanion
+typedef $$LocalEntitiesTableUpdateCompanionBuilder = LocalEntitiesCompanion
     Function({
   Value<String> id,
-  Value<String> tableName,
+  Value<String> entityName,
   Value<String> payload,
+  Value<int> version,
   Value<String> syncStatus,
   Value<String?> syncError,
   Value<DateTime> localUpdatedAt,
@@ -956,9 +1001,9 @@ typedef $$LocalRecordsTableUpdateCompanionBuilder = LocalRecordsCompanion
   Value<int> rowid,
 });
 
-class $$LocalRecordsTableFilterComposer
-    extends Composer<_$AppDatabase, $LocalRecordsTable> {
-  $$LocalRecordsTableFilterComposer({
+class $$LocalEntitiesTableFilterComposer
+    extends Composer<_$AppDatabase, $LocalEntitiesTable> {
+  $$LocalEntitiesTableFilterComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -968,11 +1013,14 @@ class $$LocalRecordsTableFilterComposer
   ColumnFilters<String> get id => $composableBuilder(
       column: $table.id, builder: (column) => ColumnFilters(column));
 
-  ColumnFilters<String> get tableName => $composableBuilder(
-      column: $table.tableName, builder: (column) => ColumnFilters(column));
+  ColumnFilters<String> get entityName => $composableBuilder(
+      column: $table.entityName, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<String> get payload => $composableBuilder(
       column: $table.payload, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get version => $composableBuilder(
+      column: $table.version, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<String> get syncStatus => $composableBuilder(
       column: $table.syncStatus, builder: (column) => ColumnFilters(column));
@@ -992,9 +1040,9 @@ class $$LocalRecordsTableFilterComposer
       column: $table.deletedAt, builder: (column) => ColumnFilters(column));
 }
 
-class $$LocalRecordsTableOrderingComposer
-    extends Composer<_$AppDatabase, $LocalRecordsTable> {
-  $$LocalRecordsTableOrderingComposer({
+class $$LocalEntitiesTableOrderingComposer
+    extends Composer<_$AppDatabase, $LocalEntitiesTable> {
+  $$LocalEntitiesTableOrderingComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -1004,11 +1052,14 @@ class $$LocalRecordsTableOrderingComposer
   ColumnOrderings<String> get id => $composableBuilder(
       column: $table.id, builder: (column) => ColumnOrderings(column));
 
-  ColumnOrderings<String> get tableName => $composableBuilder(
-      column: $table.tableName, builder: (column) => ColumnOrderings(column));
+  ColumnOrderings<String> get entityName => $composableBuilder(
+      column: $table.entityName, builder: (column) => ColumnOrderings(column));
 
   ColumnOrderings<String> get payload => $composableBuilder(
       column: $table.payload, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get version => $composableBuilder(
+      column: $table.version, builder: (column) => ColumnOrderings(column));
 
   ColumnOrderings<String> get syncStatus => $composableBuilder(
       column: $table.syncStatus, builder: (column) => ColumnOrderings(column));
@@ -1028,9 +1079,9 @@ class $$LocalRecordsTableOrderingComposer
       column: $table.deletedAt, builder: (column) => ColumnOrderings(column));
 }
 
-class $$LocalRecordsTableAnnotationComposer
-    extends Composer<_$AppDatabase, $LocalRecordsTable> {
-  $$LocalRecordsTableAnnotationComposer({
+class $$LocalEntitiesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $LocalEntitiesTable> {
+  $$LocalEntitiesTableAnnotationComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -1040,11 +1091,14 @@ class $$LocalRecordsTableAnnotationComposer
   GeneratedColumn<String> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
 
-  GeneratedColumn<String> get tableName =>
-      $composableBuilder(column: $table.tableName, builder: (column) => column);
+  GeneratedColumn<String> get entityName => $composableBuilder(
+      column: $table.entityName, builder: (column) => column);
 
   GeneratedColumn<String> get payload =>
       $composableBuilder(column: $table.payload, builder: (column) => column);
+
+  GeneratedColumn<int> get version =>
+      $composableBuilder(column: $table.version, builder: (column) => column);
 
   GeneratedColumn<String> get syncStatus => $composableBuilder(
       column: $table.syncStatus, builder: (column) => column);
@@ -1062,35 +1116,36 @@ class $$LocalRecordsTableAnnotationComposer
       $composableBuilder(column: $table.deletedAt, builder: (column) => column);
 }
 
-class $$LocalRecordsTableTableManager extends RootTableManager<
+class $$LocalEntitiesTableTableManager extends RootTableManager<
     _$AppDatabase,
-    $LocalRecordsTable,
-    LocalRecord,
-    $$LocalRecordsTableFilterComposer,
-    $$LocalRecordsTableOrderingComposer,
-    $$LocalRecordsTableAnnotationComposer,
-    $$LocalRecordsTableCreateCompanionBuilder,
-    $$LocalRecordsTableUpdateCompanionBuilder,
+    $LocalEntitiesTable,
+    LocalEntity,
+    $$LocalEntitiesTableFilterComposer,
+    $$LocalEntitiesTableOrderingComposer,
+    $$LocalEntitiesTableAnnotationComposer,
+    $$LocalEntitiesTableCreateCompanionBuilder,
+    $$LocalEntitiesTableUpdateCompanionBuilder,
     (
-      LocalRecord,
-      BaseReferences<_$AppDatabase, $LocalRecordsTable, LocalRecord>
+      LocalEntity,
+      BaseReferences<_$AppDatabase, $LocalEntitiesTable, LocalEntity>
     ),
-    LocalRecord,
+    LocalEntity,
     PrefetchHooks Function()> {
-  $$LocalRecordsTableTableManager(_$AppDatabase db, $LocalRecordsTable table)
+  $$LocalEntitiesTableTableManager(_$AppDatabase db, $LocalEntitiesTable table)
       : super(TableManagerState(
           db: db,
           table: table,
           createFilteringComposer: () =>
-              $$LocalRecordsTableFilterComposer($db: db, $table: table),
+              $$LocalEntitiesTableFilterComposer($db: db, $table: table),
           createOrderingComposer: () =>
-              $$LocalRecordsTableOrderingComposer($db: db, $table: table),
+              $$LocalEntitiesTableOrderingComposer($db: db, $table: table),
           createComputedFieldComposer: () =>
-              $$LocalRecordsTableAnnotationComposer($db: db, $table: table),
+              $$LocalEntitiesTableAnnotationComposer($db: db, $table: table),
           updateCompanionCallback: ({
             Value<String> id = const Value.absent(),
-            Value<String> tableName = const Value.absent(),
+            Value<String> entityName = const Value.absent(),
             Value<String> payload = const Value.absent(),
+            Value<int> version = const Value.absent(),
             Value<String> syncStatus = const Value.absent(),
             Value<String?> syncError = const Value.absent(),
             Value<DateTime> localUpdatedAt = const Value.absent(),
@@ -1098,10 +1153,11 @@ class $$LocalRecordsTableTableManager extends RootTableManager<
             Value<DateTime?> deletedAt = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
-              LocalRecordsCompanion(
+              LocalEntitiesCompanion(
             id: id,
-            tableName: tableName,
+            entityName: entityName,
             payload: payload,
+            version: version,
             syncStatus: syncStatus,
             syncError: syncError,
             localUpdatedAt: localUpdatedAt,
@@ -1111,8 +1167,9 @@ class $$LocalRecordsTableTableManager extends RootTableManager<
           ),
           createCompanionCallback: ({
             required String id,
-            required String tableName,
+            required String entityName,
             required String payload,
+            Value<int> version = const Value.absent(),
             Value<String> syncStatus = const Value.absent(),
             Value<String?> syncError = const Value.absent(),
             required DateTime localUpdatedAt,
@@ -1120,10 +1177,11 @@ class $$LocalRecordsTableTableManager extends RootTableManager<
             Value<DateTime?> deletedAt = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
-              LocalRecordsCompanion.insert(
+              LocalEntitiesCompanion.insert(
             id: id,
-            tableName: tableName,
+            entityName: entityName,
             payload: payload,
+            version: version,
             syncStatus: syncStatus,
             syncError: syncError,
             localUpdatedAt: localUpdatedAt,
@@ -1138,24 +1196,24 @@ class $$LocalRecordsTableTableManager extends RootTableManager<
         ));
 }
 
-typedef $$LocalRecordsTableProcessedTableManager = ProcessedTableManager<
+typedef $$LocalEntitiesTableProcessedTableManager = ProcessedTableManager<
     _$AppDatabase,
-    $LocalRecordsTable,
-    LocalRecord,
-    $$LocalRecordsTableFilterComposer,
-    $$LocalRecordsTableOrderingComposer,
-    $$LocalRecordsTableAnnotationComposer,
-    $$LocalRecordsTableCreateCompanionBuilder,
-    $$LocalRecordsTableUpdateCompanionBuilder,
+    $LocalEntitiesTable,
+    LocalEntity,
+    $$LocalEntitiesTableFilterComposer,
+    $$LocalEntitiesTableOrderingComposer,
+    $$LocalEntitiesTableAnnotationComposer,
+    $$LocalEntitiesTableCreateCompanionBuilder,
+    $$LocalEntitiesTableUpdateCompanionBuilder,
     (
-      LocalRecord,
-      BaseReferences<_$AppDatabase, $LocalRecordsTable, LocalRecord>
+      LocalEntity,
+      BaseReferences<_$AppDatabase, $LocalEntitiesTable, LocalEntity>
     ),
-    LocalRecord,
+    LocalEntity,
     PrefetchHooks Function()>;
 typedef $$SyncQueueTableCreateCompanionBuilder = SyncQueueCompanion Function({
   required String id,
-  required String tableName,
+  required String entityName,
   required String recordId,
   required String operation,
   Value<String?> payload,
@@ -1167,7 +1225,7 @@ typedef $$SyncQueueTableCreateCompanionBuilder = SyncQueueCompanion Function({
 });
 typedef $$SyncQueueTableUpdateCompanionBuilder = SyncQueueCompanion Function({
   Value<String> id,
-  Value<String> tableName,
+  Value<String> entityName,
   Value<String> recordId,
   Value<String> operation,
   Value<String?> payload,
@@ -1190,8 +1248,8 @@ class $$SyncQueueTableFilterComposer
   ColumnFilters<String> get id => $composableBuilder(
       column: $table.id, builder: (column) => ColumnFilters(column));
 
-  ColumnFilters<String> get tableName => $composableBuilder(
-      column: $table.tableName, builder: (column) => ColumnFilters(column));
+  ColumnFilters<String> get entityName => $composableBuilder(
+      column: $table.entityName, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<String> get recordId => $composableBuilder(
       column: $table.recordId, builder: (column) => ColumnFilters(column));
@@ -1227,8 +1285,8 @@ class $$SyncQueueTableOrderingComposer
   ColumnOrderings<String> get id => $composableBuilder(
       column: $table.id, builder: (column) => ColumnOrderings(column));
 
-  ColumnOrderings<String> get tableName => $composableBuilder(
-      column: $table.tableName, builder: (column) => ColumnOrderings(column));
+  ColumnOrderings<String> get entityName => $composableBuilder(
+      column: $table.entityName, builder: (column) => ColumnOrderings(column));
 
   ColumnOrderings<String> get recordId => $composableBuilder(
       column: $table.recordId, builder: (column) => ColumnOrderings(column));
@@ -1264,8 +1322,8 @@ class $$SyncQueueTableAnnotationComposer
   GeneratedColumn<String> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
 
-  GeneratedColumn<String> get tableName =>
-      $composableBuilder(column: $table.tableName, builder: (column) => column);
+  GeneratedColumn<String> get entityName => $composableBuilder(
+      column: $table.entityName, builder: (column) => column);
 
   GeneratedColumn<String> get recordId =>
       $composableBuilder(column: $table.recordId, builder: (column) => column);
@@ -1316,7 +1374,7 @@ class $$SyncQueueTableTableManager extends RootTableManager<
               $$SyncQueueTableAnnotationComposer($db: db, $table: table),
           updateCompanionCallback: ({
             Value<String> id = const Value.absent(),
-            Value<String> tableName = const Value.absent(),
+            Value<String> entityName = const Value.absent(),
             Value<String> recordId = const Value.absent(),
             Value<String> operation = const Value.absent(),
             Value<String?> payload = const Value.absent(),
@@ -1328,7 +1386,7 @@ class $$SyncQueueTableTableManager extends RootTableManager<
           }) =>
               SyncQueueCompanion(
             id: id,
-            tableName: tableName,
+            entityName: entityName,
             recordId: recordId,
             operation: operation,
             payload: payload,
@@ -1340,7 +1398,7 @@ class $$SyncQueueTableTableManager extends RootTableManager<
           ),
           createCompanionCallback: ({
             required String id,
-            required String tableName,
+            required String entityName,
             required String recordId,
             required String operation,
             Value<String?> payload = const Value.absent(),
@@ -1352,7 +1410,7 @@ class $$SyncQueueTableTableManager extends RootTableManager<
           }) =>
               SyncQueueCompanion.insert(
             id: id,
-            tableName: tableName,
+            entityName: entityName,
             recordId: recordId,
             operation: operation,
             payload: payload,
@@ -1388,8 +1446,8 @@ typedef $$SyncQueueTableProcessedTableManager = ProcessedTableManager<
 class $AppDatabaseManager {
   final _$AppDatabase _db;
   $AppDatabaseManager(this._db);
-  $$LocalRecordsTableTableManager get localRecords =>
-      $$LocalRecordsTableTableManager(_db, _db.localRecords);
+  $$LocalEntitiesTableTableManager get localEntities =>
+      $$LocalEntitiesTableTableManager(_db, _db.localEntities);
   $$SyncQueueTableTableManager get syncQueue =>
       $$SyncQueueTableTableManager(_db, _db.syncQueue);
 }
