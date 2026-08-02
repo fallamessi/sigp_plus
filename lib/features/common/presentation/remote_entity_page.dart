@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
-import '../../../core/network/api_client.dart';
+import '../../../core/providers/supabase_provider.dart';
 import '../../../core/network/entity_repository.dart';
-import '../../auth/presentation/auth_providers.dart';
+import '../../../core/database/local_database.dart';
 
 enum DynamicFieldType {
   text,
@@ -122,8 +121,10 @@ class _RemoteEntityPageState extends ConsumerState<RemoteEntityPage> {
   bool loading = true;
   String? error;
 
-  EntityRepository get repository =>
-      EntityRepository(ApiClient(ref.read(sessionStoreProvider)));
+  EntityRepository get repository => EntityRepository(
+    ref.read(supabaseClientProvider),
+        LocalDatabase.instance,
+      );
 
   @override
   void initState() {
